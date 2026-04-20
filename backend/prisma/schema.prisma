@@ -1,0 +1,572 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth & Tenancy ───────────────────────────────────────────────────────────
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?  @unique
+  email     String?
+  phone     String?
+  plan      String   @default("basic")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users              User[]
+  roles              Role[]
+  documentTypes      DocumentType[]
+  documents          Document[]
+  workflowTemplates  WorkflowTemplate[]
+  approvalRequests   ApprovalRequest[]
+  distributions      DocumentDistribution[]
+  alertNotifications AlertNotification[]
+  trainings          Training[]
+  trainingAssignments TrainingAssignment[]
+
+  @@map("companies")
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  companyId           String    @map("company_id")
+  name                String
+  email               String
+  password            String
+  isActive            Boolean   @default(true) @map("is_active")
+  isMaster            Boolean   @default(false) @map("is_master")
+  refreshToken        String?   @map("refresh_token")
+  refreshTokenExpires DateTime? @map("refresh_token_expires")
+  lastLoginAt         DateTime? @map("last_login_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  company              Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userRoles            UserRole[]
+  ownedDocuments       Document[]             @relation("DocumentOwner")
+  statusHistory        DocumentStatusHistory[]
+  versions             DocumentVersion[]
+  approvalActions      ApprovalAction[]
+  requestedApprovals   ApprovalRequest[]      @relation("ApprovalRequestedBy")
+  workflowStepsUser    WorkflowStep[]         @relation("StepApproverUser")
+  receivedDistributions  DocumentDistribution[] @relation("DistributionReceiver")
+  sentDistributions      DocumentDistribution[] @relation("DistributionSender")
+  readConfirmations      ReadConfirmation[]
+  alertNotifications     AlertNotification[]
+  createdTrainings       Training[]             @relation("TrainingCreator")
+  receivedAssignments    TrainingAssignment[]   @relation("AssignmentReceiver")
+  sentAssignments        TrainingAssignment[]   @relation("AssignmentSender")
+  trainingCompletions    TrainingCompletion[]   @relation("CompletionUser")
+  recordedCompletions    TrainingCompletion[]   @relation("CompletionRecorder")
+
+  @@unique([email, companyId])
+  @@index([companyId])
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  workflowSteps   WorkflowStep[]   @relation("StepApproverRole")
+
+  @@unique([name, companyId])
+  @@index([companyId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  resource    String
+  action      String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@index([resource])
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String   @map("role_id")
+  permissionId String   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("role_permissions")
+}
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+enum DocumentStatus {
+  draft
+  review
+  approval
+  published
+  obsolete
+  cancelled
+}
+
+enum Confidentiality {
+  public_internal
+  restricted
+  confidential
+  critical
+}
+
+model DocumentType {
+  id             String   @id @default(uuid())
+  companyId      String   @map("company_id")
+  name           String
+  code           String
+  description    String?
+  prefix         String
+  retentionYears Int?     @map("retention_years")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  documents         Document[]
+  workflowTemplates WorkflowTemplate[]
+
+  @@unique([code, companyId])
+  @@index([companyId])
+  @@map("document_types")
+}
+
+model DocumentCodeSequence {
+  id             String @id @default(uuid())
+  companyId      String @map("company_id")
+  documentTypeId String @map("document_type_id")
+  year           Int
+  lastSequence   Int    @default(0) @map("last_sequence")
+
+  @@unique([companyId, documentTypeId, year])
+  @@map("document_code_sequences")
+}
+
+model Document {
+  id              String          @id @default(uuid())
+  companyId       String          @map("company_id")
+  code            String
+  title           String
+  description     String?
+  documentTypeId  String          @map("document_type_id")
+  area            String?
+  process         String?
+  product         String?
+  ownerId         String          @map("owner_id")
+  status          DocumentStatus  @default(draft)
+  currentVersion  String          @default("Rev.00") @map("current_version")
+  confidentiality Confidentiality @default(public_internal)
+  validityStart   DateTime?       @map("validity_start")
+  validityEnd     DateTime?       @map("validity_end")
+  tags            String[]        @default([])
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  company          Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  documentType     DocumentType           @relation(fields: [documentTypeId], references: [id])
+  owner            User                   @relation("DocumentOwner", fields: [ownerId], references: [id])
+  versions         DocumentVersion[]
+  fileObjects      FileObject[]
+  statusHistory    DocumentStatusHistory[]
+  approvalRequests ApprovalRequest[]
+  distributions    DocumentDistribution[]
+  trainings        Training[]
+
+  @@unique([code, companyId])
+  @@index([companyId])
+  @@index([status])
+  @@index([ownerId])
+  @@index([documentTypeId])
+  @@index([validityEnd])
+  @@map("documents")
+}
+
+model FileObject {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  documentId   String   @map("document_id")
+  versionId    String?  @map("version_id")
+  originalName String   @map("original_name")
+  storagePath  String   @map("storage_path")
+  mimeType     String   @map("mime_type")
+  sizeBytes    BigInt   @map("size_bytes")
+  checksum     String
+  uploadedBy   String   @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version  DocumentVersion? @relation(fields: [versionId], references: [id])
+
+  @@index([documentId])
+  @@map("file_objects")
+}
+
+model DocumentVersion {
+  id            String         @id @default(uuid())
+  documentId    String         @map("document_id")
+  companyId     String         @map("company_id")
+  versionCode   String         @map("version_code")
+  versionNumber Int            @map("version_number")
+  reason        String
+  snapshotData  Json           @map("snapshot_data")
+  status        DocumentStatus
+  createdById   String         @map("created_by")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  document    Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  fileObjects FileObject[]
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+model DocumentStatusHistory {
+  id         String          @id @default(uuid())
+  documentId String          @map("document_id")
+  companyId  String          @map("company_id")
+  fromStatus DocumentStatus? @map("from_status")
+  toStatus   DocumentStatus  @map("to_status")
+  userId     String          @map("user_id")
+  comment    String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([documentId])
+  @@index([companyId])
+  @@map("document_status_history")
+}
+
+// ─── Audit & Alerts ───────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  userId       String?  @map("user_id")
+  userName     String?  @map("user_name")
+  userEmail    String?  @map("user_email")
+  action       String
+  resource     String
+  resourceId   String?  @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model AlertNotification {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  userId       String   @map("user_id")
+  type         String
+  severity     String   @default("info")
+  title        String
+  message      String
+  resourceId   String?  @map("resource_id")
+  resourceType String?  @map("resource_type")
+  isRead       Boolean  @default(false) @map("is_read")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([isRead])
+  @@map("alert_notifications")
+}
+
+// ─── Distribution & Reading ───────────────────────────────────────────────────
+
+enum CopyType {
+  controlled
+  uncontrolled
+}
+
+model DocumentDistribution {
+  id         String    @id @default(uuid())
+  companyId  String    @map("company_id")
+  documentId String    @map("document_id")
+  userId     String    @map("user_id")
+  sentById   String    @map("sent_by_id")
+  copyType   CopyType  @default(controlled) @map("copy_type")
+  copyNumber Int?      @map("copy_number")
+  version    String
+  dueDate    DateTime? @map("due_date")
+  notes      String?
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document     Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user         User              @relation("DistributionReceiver", fields: [userId], references: [id])
+  sentBy       User              @relation("DistributionSender", fields: [sentById], references: [id])
+  confirmation ReadConfirmation?
+
+  @@unique([documentId, userId, version])
+  @@index([companyId])
+  @@index([documentId])
+  @@index([userId])
+  @@map("document_distributions")
+}
+
+model ReadConfirmation {
+  id             String   @id @default(uuid())
+  distributionId String   @unique @map("distribution_id")
+  companyId      String   @map("company_id")
+  userId         String   @map("user_id")
+  confirmedAt    DateTime @default(now()) @map("confirmed_at")
+  ip             String?
+  userAgent      String?
+  signature      String
+
+  distribution DocumentDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("read_confirmations")
+}
+
+// ─── Workflow & Approvals ────────────────────────────────────────────────────
+
+enum ApprovalStatus {
+  pending
+  in_progress
+  approved
+  rejected
+  cancelled
+}
+
+enum ApprovalActionType {
+  approve
+  reject
+  request_changes
+}
+
+model WorkflowTemplate {
+  id             String   @id @default(uuid())
+  companyId      String   @map("company_id")
+  documentTypeId String?  @map("document_type_id")
+  name           String
+  description    String?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  documentType DocumentType?    @relation(fields: [documentTypeId], references: [id])
+  steps        WorkflowStep[]
+  requests     ApprovalRequest[]
+
+  @@index([companyId])
+  @@map("workflow_templates")
+}
+
+model WorkflowStep {
+  id                 String   @id @default(uuid())
+  workflowTemplateId String   @map("workflow_template_id")
+  order              Int
+  name               String
+  description        String?
+  approverUserId     String?  @map("approver_user_id")
+  approverRoleId     String?  @map("approver_role_id")
+  slaHours           Int?     @map("sla_hours")
+  isRequired         Boolean  @default(true) @map("is_required")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  workflowTemplate WorkflowTemplate @relation(fields: [workflowTemplateId], references: [id], onDelete: Cascade)
+  approverUser     User?            @relation("StepApproverUser", fields: [approverUserId], references: [id])
+  approverRole     Role?            @relation("StepApproverRole", fields: [approverRoleId], references: [id])
+
+  @@index([workflowTemplateId])
+  @@map("workflow_steps")
+}
+
+model ApprovalRequest {
+  id                 String         @id @default(uuid())
+  companyId          String         @map("company_id")
+  documentId         String         @map("document_id")
+  workflowTemplateId String         @map("workflow_template_id")
+  currentStep        Int            @default(1) @map("current_step")
+  totalSteps         Int            @map("total_steps")
+  status             ApprovalStatus @default(in_progress)
+  requestedById      String         @map("requested_by_id")
+  completedAt        DateTime?      @map("completed_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document         Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workflowTemplate WorkflowTemplate @relation(fields: [workflowTemplateId], references: [id])
+  requestedBy      User             @relation("ApprovalRequestedBy", fields: [requestedById], references: [id])
+  actions          ApprovalAction[]
+
+  @@index([companyId])
+  @@index([documentId])
+  @@index([status])
+  @@map("approval_requests")
+}
+
+model ApprovalAction {
+  id                String             @id @default(uuid())
+  approvalRequestId String             @map("approval_request_id")
+  companyId         String             @map("company_id")
+  stepOrder         Int                @map("step_order")
+  stepName          String             @map("step_name")
+  userId            String             @map("user_id")
+  userName          String             @map("user_name")
+  userEmail         String             @map("user_email")
+  action            ApprovalActionType
+  comment           String?
+  ip                String?
+  userAgent         String?
+  signature         String
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  approvalRequest ApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id])
+
+  @@index([approvalRequestId])
+  @@index([userId])
+  @@map("approval_actions")
+}
+
+// ─── Trainings ────────────────────────────────────────────────────────────────
+
+enum TrainingStatus {
+  draft
+  active
+  archived
+}
+
+enum AssignmentStatus {
+  pending
+  in_progress
+  completed
+  overdue
+  cancelled
+}
+
+model Training {
+  id             String         @id @default(uuid())
+  companyId      String         @map("company_id")
+  title          String
+  description    String?
+  documentId     String?        @map("document_id")
+  category       String?
+  durationHours  Float?         @map("duration_hours")
+  validityMonths Int?           @map("validity_months")
+  passingScore   Int?           @map("passing_score")
+  status         TrainingStatus @default(draft)
+  createdById    String         @map("created_by_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  company     Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  document    Document?            @relation(fields: [documentId], references: [id])
+  createdBy   User                 @relation("TrainingCreator", fields: [createdById], references: [id])
+  assignments TrainingAssignment[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("trainings")
+}
+
+model TrainingAssignment {
+  id          String           @id @default(uuid())
+  companyId   String           @map("company_id")
+  trainingId  String           @map("training_id")
+  userId      String           @map("user_id")
+  assignedById String          @map("assigned_by_id")
+  status      AssignmentStatus @default(pending)
+  dueDate     DateTime?        @map("due_date")
+  notes       String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  company    Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  training   Training           @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  user       User               @relation("AssignmentReceiver", fields: [userId], references: [id])
+  assignedBy User               @relation("AssignmentSender", fields: [assignedById], references: [id])
+  completion TrainingCompletion?
+
+  @@unique([trainingId, userId])
+  @@index([companyId])
+  @@index([trainingId])
+  @@index([userId])
+  @@map("training_assignments")
+}
+
+model TrainingCompletion {
+  id           String   @id @default(uuid())
+  assignmentId String   @unique @map("assignment_id")
+  companyId    String   @map("company_id")
+  userId       String   @map("user_id")
+  score        Int?
+  passed       Boolean  @default(true)
+  notes        String?
+  completedAt  DateTime @default(now()) @map("completed_at")
+  expiresAt    DateTime? @map("expires_at")
+  recordedById String   @map("recorded_by_id")
+  signature    String
+
+  assignment  TrainingAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user        User               @relation("CompletionUser", fields: [userId], references: [id])
+  recordedBy  User               @relation("CompletionRecorder", fields: [recordedById], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@map("training_completions")
+}

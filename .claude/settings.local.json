@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm config *)",
+      "Bash(npm ping *)",
+      "Bash(docker compose *)",
+      "Bash(docker --version)",
+      "Bash(where docker *)",
+      "Bash(xargs ls *)",
+      "Bash(docker.exe compose *)",
+      "Bash(xargs grep *)"
+    ]
+  }
+}

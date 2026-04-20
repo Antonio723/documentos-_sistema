@@ -1,0 +1,233 @@
+
+COMPLEMENTO PREMIUM - PARTE 1 (ITENS FALTANTES)
+Adicionar este arquivo ao prompt principal como expansão enterprise.
+
+====================================================
+FASE EXTRA 1 - ASSINATURA ELETRÔNICA AVANÇADA
+====================================================
+
+[BACKEND PROMPT]
+Implementar assinatura eletrônica robusta para aprovações.
+
+Registrar em cada ação:
+- hash único da aprovação
+- user_id
+- nome usuário
+- email
+- IP público
+- user agent
+- data/hora UTC
+- etapa workflow
+- versão documento
+- comentário
+
+Garantir trilha inviolável.
+
+Criar endpoint de verificação de autenticidade.
+
+[FRONTEND PROMPT]
+Tela de assinatura/aprovação premium:
+- resumo documento
+- versão
+- etapa atual
+- botão aprovar
+- botão rejeitar
+- confirmação forte
+
+====================================================
+FASE EXTRA 2 - SLA WORKFLOW
+====================================================
+
+[BACKEND PROMPT]
+Adicionar SLA por etapa de workflow.
+
+Campos:
+- prazo_horas
+- prazo_dias
+- prioridade
+
+Jobs automáticos:
+- etapa atrasada
+- escalonamento gestor
+- lembrete 24h antes
+
+Dashboard SLA.
+
+[FRONTEND PROMPT]
+Criar:
+- config SLA workflow
+- cards atrasados
+- heatmap atrasos
+- ranking gargalos
+
+====================================================
+FASE EXTRA 3 - RETENÇÃO DOCUMENTAL
+====================================================
+
+[BACKEND PROMPT]
+Implementar matriz de retenção por tipo documental.
+
+Exemplos:
+POP = 5 anos
+Checklist = 2 anos
+Auditoria = 10 anos
+
+Regras:
+- expiração automática
+- mover para arquivado
+- bloquear exclusão indevida
+- alerta pré-expiração
+
+[FRONTEND PROMPT]
+Tela:
+- matriz retenção
+- documentos expirando
+- arquivados
+
+====================================================
+FASE EXTRA 4 - PERMISSÕES AVANÇADAS
+====================================================
+
+[BACKEND PROMPT]
+Expandir RBAC para ABAC híbrido.
+
+Permissões por:
+- empresa
+- unidade
+- planta
+- área
+- cargo
+- confidencialidade
+- tipo documento
+
+Regras contextuais.
+
+[FRONTEND PROMPT]
+Tela matriz de acesso visual.
+
+====================================================
+FASE EXTRA 5 - TEMPLATES DOCUMENTAIS
+====================================================
+
+[BACKEND PROMPT]
+Criar módulo templates.
+
+Tipos:
+- POP
+- IT
+- Política
+- Formulário
+- Auditoria
+
+Gerar novos documentos a partir template.
+
+[FRONTEND PROMPT]
+Editor templates:
+- cabeçalho padrão
+- rodapé
+- campos variáveis
+
+====================================================
+FASE EXTRA 6 - EXPORTAÇÕES
+====================================================
+
+[BACKEND PROMPT]
+Implementar exportações:
+
+- PDF
+- XLSX
+- CSV
+
+Relatórios:
+- documentos ativos
+- vencidos
+- pendências
+- auditoria
+- treinamentos
+
+[FRONTEND PROMPT]
+Botões exportar em listas e dashboards.
+
+====================================================
+FASE EXTRA 7 - BACKUP E DISASTER RECOVERY
+====================================================
+
+[BACKEND PROMPT]
+Criar rotinas:
+
+- backup PostgreSQL diário
+- backup MinIO
+- retenção backups
+- restore testado
+- health checks
+
+[FRONTEND PROMPT]
+Tela admin:
+- status backup
+- último backup
+- restore logs
+
+====================================================
+FASE EXTRA 8 - CONFIDENCIALIDADE
+====================================================
+
+[BACKEND PROMPT]
+Níveis:
+- público interno
+- restrito
+- confidencial
+- crítico
+
+Watermark automático em downloads sensíveis.
+
+Bloquear compartilhamento indevido.
+
+[FRONTEND PROMPT]
+Badges confidencialidade + justificativa acesso.
+
+====================================================
+FASE EXTRA 9 - OCR E INDEXAÇÃO
+====================================================
+
+[BACKEND PROMPT]
+Implementar OCR em arquivos escaneados.
+
+Fluxo:
+- upload PDF imagem
+- OCR assíncrono
+- indexação texto
+- busca conteúdo interno
+
+Fila BullMQ.
+
+[FRONTEND PROMPT]
+Status processamento OCR.
+
+====================================================
+FASE EXTRA 10 - OBSOLESCÊNCIA CRÍTICA
+====================================================
+
+[BACKEND PROMPT]
+Se documento obsoleto ainda em uso:
+
+- gerar alerta crítico
+- notificar gestores
+- registrar incidente
+
+[FRONTEND PROMPT]
+Painel vermelho documentos obsoletos em uso.
+
+====================================================
+PROMPT FINAL
+====================================================
+
+Audite todo sistema e transforme em nível enterprise premium comparável a SoftExpert / Qualiex / SE Suite moderno.
+
+Aplicar:
+- performance
+- segurança
+- observabilidade
+- logs
+- testes
+- UX premium
+- documentação completa

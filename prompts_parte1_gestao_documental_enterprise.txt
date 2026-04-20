@@ -1,0 +1,356 @@
+
+PROMPTS ENTERPRISE - PARTE 1 (GESTÃO DOCUMENTAL)
+STACK OBRIGATÓRIA:
+Backend: Node.js + TypeScript + Express.js
+Frontend: React + TypeScript + TailwindCSS
+Banco: PostgreSQL + Prisma ORM
+Infra: Docker + Docker Compose + Nginx
+Storage: MinIO
+Cache/Fila: Redis + BullMQ
+Auth: JWT + Refresh Token
+
+ARQUITETURA BACKEND:
+src/
+  app.ts
+  server.ts
+  config/
+  modules/
+  middlewares/
+  shared/
+  jobs/
+  routes/
+  docs/
+
+Padrões obrigatórios:
+- Clean Architecture
+- Controllers / Services / Repositories
+- DTO validation (zod ou class-validator)
+- Error handler global
+- Logs estruturados
+- Multi-tenant por company_id
+- Testável
+- Código pronto para produção
+
+====================================================
+FASE 1 - FUNDAÇÃO
+====================================================
+
+[BACKEND PROMPT]
+Crie backend Node.js + TypeScript + Express enterprise com:
+- estrutura modular
+- Prisma + PostgreSQL
+- Docker
+- JWT auth
+- Refresh token
+- bcrypt
+- rate limit login
+- RBAC básico
+- tabelas:
+companies, users, roles, permissions, user_roles
+- middleware tenant por company_id
+- Swagger/OpenAPI
+- logs estruturados
+- seeds admin master
+
+Rotas:
+POST /auth/login
+POST /auth/refresh
+POST /companies
+CRUD /users
+CRUD /roles
+
+Entregar projeto rodando via docker-compose.
+
+[FRONTEND PROMPT]
+Crie frontend React enterprise com:
+- React Router
+- React Query
+- Zustand
+- Tailwind
+- shadcn/ui
+
+Páginas:
+- login
+- dashboard inicial
+- usuários
+- empresas
+- permissões
+
+Layout:
+- sidebar
+- topbar
+- dark mode
+- responsivo
+
+====================================================
+FASE 2 - DOCUMENTOS CORE
+====================================================
+
+[BACKEND PROMPT]
+Implementar módulo documents:
+
+Tabelas:
+document_types
+documents
+file_objects
+
+Campos:
+codigo automatico
+titulo
+descricao
+tipo
+area
+processo
+produto
+owner_id
+status
+vigencia_inicio
+vigencia_fim
+
+Status:
+draft, review, approval, published, obsolete, cancelled
+
+Funcionalidades:
+- CRUD documentos
+- upload arquivo MinIO
+- metadata no banco
+- geração código automática
+- filtros avançados
+- paginação
+- busca texto
+
+Rotas REST completas.
+
+[FRONTEND PROMPT]
+Criar telas:
+- lista documentos
+- cadastro documento
+- edição
+- visualização
+- upload arquivo
+- filtros avançados
+- paginação
+- badges status
+
+====================================================
+FASE 3 - VERSIONAMENTO
+====================================================
+
+[BACKEND PROMPT]
+Implementar versionamento profissional.
+
+Tabelas:
+document_versions
+document_status_history
+
+Regras:
+- Rev.00 inicial
+- nova revisão cria Rev+1
+- versão publicada anterior torna-se obsolete
+- snapshot metadata
+- histórico alterações
+- motivo revisão obrigatório
+
+Endpoints:
+POST /documents/:id/new-version
+GET /documents/:id/versions
+GET /documents/:id/history
+
+[FRONTEND PROMPT]
+Criar:
+- timeline histórico
+- lista versões
+- comparar versões metadata
+- criar nova revisão
+- modal motivo revisão
+
+====================================================
+FASE 4 - WORKFLOW E APROVAÇÕES
+====================================================
+
+[BACKEND PROMPT]
+Implementar workflow configurável.
+
+Tabelas:
+workflow_templates
+workflow_steps
+approval_requests
+approval_actions
+
+Fluxo por tipo documental.
+
+Regras:
+- documento só publica com 100% aprovações
+- approve
+- reject
+- request_changes
+
+Registrar:
+user_id
+datahora
+ip
+comentário
+
+Jobs alertando pendências.
+
+[FRONTEND PROMPT]
+Criar telas:
+- admin workflows
+- kanban aprovações
+- aprovar/rejeitar
+- comentários
+- progresso fluxo
+
+====================================================
+FASE 5 - DISTRIBUIÇÃO E LEITURA
+====================================================
+
+[BACKEND PROMPT]
+Implementar:
+
+Tabelas:
+document_distribution
+read_confirmations
+
+Tipos:
+controlled_copy
+uncontrolled_copy
+
+Regras:
+- controlled acompanha última versão
+- uncontrolled gera PDF watermark
+- registrar destinatários
+- confirmar leitura
+
+Endpoints REST completos.
+
+[FRONTEND PROMPT]
+Criar:
+- distribuir documento
+- destinatários
+- pendências leitura
+- botão “Li e estou ciente”
+- relatórios leitura
+
+====================================================
+FASE 6 - AUDITORIA E ALERTAS
+====================================================
+
+[BACKEND PROMPT]
+Implementar audit trail completo.
+
+Tabela:
+audit_logs
+
+Registrar:
+login
+logout
+view
+download
+create
+update
+delete
+approve
+reject
+
+Redis + BullMQ jobs:
+
+- vencimento em 30 dias
+- nova revisão
+- obsoleto acessado
+- aprovação pendente
+
+[FRONTEND PROMPT]
+Criar:
+- tela auditoria
+- filtros por usuário/ação/data
+- alert center
+- notificações
+
+====================================================
+FASE 7 - TREINAMENTOS E REGISTROS
+====================================================
+
+[BACKEND PROMPT]
+Implementar:
+
+Tabelas:
+trainings
+training_assignments
+training_completions
+
+records
+record_types
+
+Treinamento vinculado a documento.
+
+Tipos registros:
+checklist
+inspeção
+auditoria
+ficha processo
+relatório
+
+Campos dinâmicos.
+
+[FRONTEND PROMPT]
+Criar:
+- gestão treinamentos
+- usuários aptos/pendentes
+- emissão registros
+- formulários dinâmicos
+
+====================================================
+FASE 8 - DASHBOARDS EXECUTIVOS
+====================================================
+
+[BACKEND PROMPT]
+Criar endpoints KPI:
+
+- docs ativos
+- docs vencendo
+- pendentes aprovação
+- tempo médio aprovação
+- leitura pendente
+- treinamentos pendentes
+
+[FRONTEND PROMPT]
+Criar dashboard premium com charts:
+- cards KPI
+- gráficos barras/linha/pizza
+- filtros período
+- exportar PDF/Excel
+
+====================================================
+PROMPT FINAL DE HARDENING
+====================================================
+
+Audite todo projeto e aplique:
+
+- boas práticas enterprise
+- tratamento erros
+- segurança OWASP
+- sanitize inputs
+- indexes PostgreSQL
+- cache Redis
+- testes unitários
+- testes integração
+- CI/CD pipeline
+- logs produção
+- documentação README
+- .env.example
+- docker produção
+
+====================================================
+PROMPT DE UI PREMIUM
+====================================================
+
+Refatore frontend para padrão SaaS enterprise moderno:
+- UX limpa
+- responsivo
+- acessibilidade
+- tabelas avançadas
+- loading skeleton
+- empty states
+- animações leves
+- tema dark/light

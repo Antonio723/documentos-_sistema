@@ -22,21 +22,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: docmanager_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   minio:
     image: minio/minio:latest
     container_name: docmanager_minio
@@ -67,27 +52,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
       minio:
         condition: service_healthy
+    env_file:
+      - ./backend/.env.production
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://docmanager:docmanager123@postgres:5432/docmanager_db
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://docmanager:${POSTGRES_PASSWORD:-docmanager123}@postgres:5432/docmanager_db
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_USE_SSL: 'false'
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: docmanager
-      CORS_ORIGINS: http://localhost
-      JWT_SECRET: change_me_in_production_at_least_32_chars!!
-      JWT_REFRESH_SECRET: change_me_refresh_in_production_32chars!
-      MASTER_ADMIN_EMAIL: admin@docmanager.com
-      MASTER_ADMIN_PASSWORD: Admin@123456
-      MASTER_COMPANY_NAME: Master Company
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      MASTER_ADMIN_EMAIL: ${MASTER_ADMIN_EMAIL:-admin@docmanager.com}
+      MASTER_ADMIN_PASSWORD: ${MASTER_ADMIN_PASSWORD}
+      MASTER_COMPANY_NAME: ${MASTER_COMPANY_NAME:-DocManager}
+      SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-DocManager <noreply@docmanager.com>}
     expose:
       - '3000'
     healthcheck:
@@ -115,5 +105,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   minio_data:

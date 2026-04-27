@@ -5,7 +5,12 @@ import { buildPrismaSkipTake } from '../../shared/utils/pagination';
 const INCLUDE = {
   document: { select: { id: true, code: true, title: true, status: true, currentVersion: true, documentTypeId: true } },
   workflowTemplate: {
-    include: { steps: { orderBy: { order: 'asc' as const } } },
+    include: {
+      steps: {
+        orderBy: { order: 'asc' as const },
+        include: { approverUser: { select: { id: true, name: true, email: true } } },
+      },
+    },
   },
   requestedBy: { select: { id: true, name: true, email: true } },
   actions: {

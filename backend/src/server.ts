@@ -3,17 +3,12 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './shared/logger/logger';
 import { connectDatabase, disconnectDatabase } from './config/database';
-import { connectRedis, redis } from './config/redis';
-import { startApprovalReminderWorker, startAlertsCronWorker, scheduleAlertsCron } from './config/queue';
+import { startSchedulers, stopSchedulers } from './config/queue';
 
 async function bootstrap(): Promise<void> {
   try {
     await connectDatabase();
-    await connectRedis();
-
-    const approvalWorker = startApprovalReminderWorker();
-    const alertsWorker = startAlertsCronWorker();
-    await scheduleAlertsCron();
+    startSchedulers();
 
     const app = createApp();
 
@@ -29,10 +24,8 @@ async function bootstrap(): Promise<void> {
     const shutdown = async (signal: string): Promise<void> => {
       logger.info({ msg: `${signal} received, shutting down gracefully` });
       server.close(async () => {
-        await approvalWorker.close();
-        await alertsWorker.close();
+        stopSchedulers();
         await disconnectDatabase();
-        await redis.quit();
         logger.info('Server closed');
         process.exit(0);
       });

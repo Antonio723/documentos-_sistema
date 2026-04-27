@@ -7,8 +7,6 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().url(),
 
-  REDIS_URL: z.string().url().default('redis://localhost:6379'),
-
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_SECRET: z.string().min(32),
@@ -31,6 +29,14 @@ const envSchema = z.object({
   MASTER_ADMIN_EMAIL: z.string().email().default('admin@docmanager.com'),
   MASTER_ADMIN_PASSWORD: z.string().min(8).default('Admin@123456'),
   MASTER_COMPANY_NAME: z.string().default('Master Company'),
+
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default('DocManager <noreply@docmanager.com>'),
+  SMTP_ENABLED: z.coerce.boolean().default(false),
 });
 
 function validateEnv() {

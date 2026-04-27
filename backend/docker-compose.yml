@@ -19,21 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: docmanager_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   minio:
     image: minio/minio:latest
     container_name: docmanager_minio
@@ -62,12 +47,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://docmanager:docmanager123@postgres:5432/docmanager_db
-      REDIS_URL: redis://redis:6379
     ports:
       - '3000:3000'
     env_file:
@@ -75,5 +57,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   minio_data:

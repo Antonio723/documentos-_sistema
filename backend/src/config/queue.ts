@@ -1,111 +1,76 @@
-import { Queue, Worker, Job } from 'bullmq';
-import { redis } from './redis';
+import cron from 'node-cron';
 import { logger } from '../shared/logger/logger';
 import { prisma } from './database';
+import { env } from './env';
 import { AlertsRepository } from '../modules/alerts/alerts.repository';
+import {
+  sendMail,
+  approvalReminderTemplate,
+  documentExpiryTemplate,
+  overdueReadingTemplate,
+} from '../shared/email/email.service';
 
-export const QUEUES = {
-  APPROVAL_REMINDER: 'approval-reminder',
-  DOCUMENT_EXPIRY: 'document-expiry',
-  ALERTS_CRON: 'alerts-cron',
-} as const;
-
-export function createQueue(name: string) {
-  return new Queue(name, {
-    connection: redis,
-    defaultJobOptions: {
-      removeOnComplete: 50,
-      removeOnFail: 100,
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
-    },
-  });
-}
-
-export const approvalReminderQueue = createQueue(QUEUES.APPROVAL_REMINDER);
+const APP_URL = env.CORS_ORIGINS.split(',')[0].trim();
 
 export type ApprovalReminderPayload = {
   approvalRequestId: string;
   documentId: string;
   documentTitle: string;
   stepName: string;
-  approverEmail?: string;
+  approverEmail?: string | string[];
   companyId: string;
 };
 
-export async function scheduleApprovalReminder(payload: ApprovalReminderPayload, delayMs = 0) {
-  await approvalReminderQueue.add('remind', payload, {
-    delay: delayMs,
-    jobId: `reminder-${payload.approvalRequestId}-${Date.now()}`,
-  });
-}
+export function scheduleApprovalReminder(payload: ApprovalReminderPayload, delayMs = 0): void {
+  setTimeout(async () => {
+    logger.info({
+      msg: 'Approval reminder fired',
+      approvalRequestId: payload.approvalRequestId,
+      documentTitle: payload.documentTitle,
+      stepName: payload.stepName,
+      approverEmail: payload.approverEmail,
+    });
 
-export function startApprovalReminderWorker() {
-  const worker = new Worker<ApprovalReminderPayload>(
-    QUEUES.APPROVAL_REMINDER,
-    async (job: Job<ApprovalReminderPayload>) => {
-      const { approvalRequestId, documentTitle, stepName, approverEmail } = job.data;
-      logger.info({
-        msg: 'Approval reminder fired',
-        approvalRequestId,
-        documentTitle,
-        stepName,
-        approverEmail,
+    if (payload.approverEmail) {
+      const tpl = approvalReminderTemplate({
+        documentTitle: payload.documentTitle,
+        stepName: payload.stepName,
+        approvalRequestId: payload.approvalRequestId,
+        appUrl: APP_URL,
       });
-      // TODO Phase 6: Send email/notification via notification service
-    },
-    { connection: redis, concurrency: 5 },
-  );
-
-  worker.on('completed', (job) => logger.debug({ msg: 'Reminder job completed', id: job.id }));
-  worker.on('failed', (job, err) => logger.error({ msg: 'Reminder job failed', id: job?.id, err }));
-
-  return worker;
+      await sendMail({ to: payload.approverEmail, ...tpl });
+    }
+  }, delayMs);
 }
 
-// ─── Alerts Cron ─────────────────────────────────────────────────────────────
+let documentExpiryCron: cron.ScheduledTask | null = null;
+let overdueReadingsCron: cron.ScheduledTask | null = null;
 
-const alertsCronQueue = createQueue(QUEUES.ALERTS_CRON);
-
-export async function scheduleAlertsCron() {
-  await alertsCronQueue.add(
-    'check-document-expiry',
-    {},
-    {
-      repeat: { pattern: '0 8 * * *' }, // daily at 08:00
-      jobId: 'daily-expiry-check',
-    },
-  );
-  await alertsCronQueue.add(
-    'check-overdue-readings',
-    {},
-    {
-      repeat: { pattern: '0 9 * * *' }, // daily at 09:00
-      jobId: 'daily-reading-check',
-    },
-  );
-  logger.info({ msg: 'Alerts cron jobs scheduled' });
-}
-
-export function startAlertsCronWorker() {
+export function startSchedulers(): void {
   const alertsRepo = new AlertsRepository();
 
-  const worker = new Worker(
-    QUEUES.ALERTS_CRON,
-    async (job: Job) => {
-      if (job.name === 'check-document-expiry') {
-        await checkDocumentExpiry(alertsRepo);
-      } else if (job.name === 'check-overdue-readings') {
-        await checkOverdueReadings(alertsRepo);
-      }
-    },
-    { connection: redis, concurrency: 1 },
-  );
+  documentExpiryCron = cron.schedule('0 8 * * *', async () => {
+    try {
+      await checkDocumentExpiry(alertsRepo);
+    } catch (err) {
+      logger.error({ msg: 'Document expiry check failed', err });
+    }
+  });
 
-  worker.on('completed', (job) => logger.info({ msg: `Cron job completed: ${job.name}` }));
-  worker.on('failed', (job, err) => logger.error({ msg: `Cron job failed: ${job?.name}`, err }));
+  overdueReadingsCron = cron.schedule('0 9 * * *', async () => {
+    try {
+      await checkOverdueReadings(alertsRepo);
+    } catch (err) {
+      logger.error({ msg: 'Overdue readings check failed', err });
+    }
+  });
 
-  return worker;
+  logger.info({ msg: 'Schedulers started' });
+}
+
+export function stopSchedulers(): void {
+  documentExpiryCron?.stop();
+  overdueReadingsCron?.stop();
 }
 
 async function checkDocumentExpiry(alertsRepo: AlertsRepository) {
@@ -125,7 +90,10 @@ async function checkDocumentExpiry(alertsRepo: AlertsRepository) {
 
     const docs = await prisma.document.findMany({
       where: { validityEnd: { gte: dayStart, lte: dayEnd }, status: 'published' },
-      include: { owner: { select: { id: true } }, company: { select: { id: true } } },
+      include: {
+        owner: { select: { id: true, email: true } },
+        company: { select: { id: true } },
+      },
     });
 
     for (const doc of docs) {
@@ -142,6 +110,14 @@ async function checkDocumentExpiry(alertsRepo: AlertsRepository) {
         resourceId:   doc.id,
         resourceType: 'document',
       });
+
+      const tpl = documentExpiryTemplate({
+        documentTitle: doc.title,
+        documentCode: doc.code,
+        label,
+        appUrl: APP_URL,
+      });
+      await sendMail({ to: doc.owner.email, ...tpl });
     }
   }
 
@@ -157,7 +133,10 @@ async function checkOverdueReadings(alertsRepo: AlertsRepository) {
       isActive: true,
       confirmation: null,
     },
-    include: { user: { select: { id: true } }, document: { select: { title: true, code: true } } },
+    include: {
+      user: { select: { id: true, email: true } },
+      document: { select: { title: true, code: true } },
+    },
   });
 
   for (const dist of overdue) {
@@ -174,6 +153,13 @@ async function checkOverdueReadings(alertsRepo: AlertsRepository) {
       resourceId:   dist.id,
       resourceType: 'distribution',
     });
+
+    const tpl = overdueReadingTemplate({
+      documentTitle: dist.document.title,
+      documentCode: dist.document.code,
+      appUrl: APP_URL,
+    });
+    await sendMail({ to: dist.user.email, ...tpl });
   }
 
   logger.info({ msg: 'Overdue readings check completed', count: overdue.length });

@@ -57,17 +57,19 @@ export class ApprovalsService {
     });
 
     const firstStep = wf.steps[0];
+    const firstStepEmail = firstStep.approverUser?.email;
     await scheduleApprovalReminder({
       approvalRequestId: request.id,
       documentId,
       documentTitle: doc.title,
       stepName: firstStep.name,
+      approverEmail: firstStepEmail,
       companyId,
     });
 
     if (firstStep.slaHours) {
       await scheduleApprovalReminder(
-        { approvalRequestId: request.id, documentId, documentTitle: doc.title, stepName: firstStep.name, companyId },
+        { approvalRequestId: request.id, documentId, documentTitle: doc.title, stepName: firstStep.name, approverEmail: firstStepEmail, companyId },
         (firstStep.slaHours - 1) * 3600 * 1000,
       );
     }
@@ -164,6 +166,7 @@ export class ApprovalsService {
         documentId: request.documentId,
         documentTitle: request.document.title,
         stepName: nextStepDef.name,
+        approverEmail: nextStepDef.approverUser?.email,
         companyId,
       });
     }

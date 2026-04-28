@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: docmanager123
       POSTGRES_DB: docmanager_db
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -78,8 +78,8 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-DocManager <noreply@docmanager.com>}
-    expose:
-      - '3000'
+    ports:
+      - '3002:3000'
     healthcheck:
       test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s

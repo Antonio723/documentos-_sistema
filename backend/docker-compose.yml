@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: docmanager123
       POSTGRES_DB: docmanager_db
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -51,7 +51,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://docmanager:docmanager123@postgres:5432/docmanager_db
     ports:
-      - '3000:3000'
+      - '3002:3000'
     env_file:
       - .env
 

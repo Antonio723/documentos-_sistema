@@ -1,4 +1,5 @@
-import nodemailer, { Transporter } from 'nodemailer';
+import { createTransport } from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { env } from '../../config/env';
 import { logger } from '../logger/logger';
 
@@ -6,7 +7,7 @@ let transporter: Transporter | null = null;
 
 function getTransporter(): Transporter {
   if (!transporter) {
-    transporter = nodemailer.createTransport({
+    transporter = createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       secure: env.SMTP_SECURE,

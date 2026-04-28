@@ -3,8 +3,19 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { UnauthorizedError } from '../shared/errors/AppError';
 import { JwtPayload } from '../modules/auth/auth.types';
+import { prisma } from '../config/database';
 
-export function authMiddleware(req: Request, _res: Response, next: NextFunction): void {
+export async function authMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  if (env.AUTH_DISABLED) {
+    const master = await prisma.user.findFirst({ where: { isMaster: true } });
+    if (!master) {
+      throw new UnauthorizedError('AUTH_DISABLED is on but no master user found — run: npx prisma db seed');
+    }
+    req.user = { id: master.id, email: master.email, companyId: master.companyId, isMaster: true, sub: master.id };
+    req.companyId = master.companyId;
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {

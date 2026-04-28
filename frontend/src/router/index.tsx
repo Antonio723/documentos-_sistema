@@ -23,7 +23,7 @@ import { DocumentTypesPage } from '@/pages/document-types/DocumentTypesPage';
 import { CompaniesPage } from '@/pages/companies/CompaniesPage';
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: import.meta.env.VITE_AUTH_DISABLED === 'true' ? <Navigate to="/dashboard" replace /> : <LoginPage /> },
   {
     element: <ProtectedRoute />,
     children: [

@@ -37,6 +37,8 @@ const envSchema = z.object({
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().default('DocManager <noreply@docmanager.com>'),
   SMTP_ENABLED: z.coerce.boolean().default(false),
+
+  AUTH_DISABLED: z.coerce.boolean().default(false),
 });
 
 function validateEnv() {

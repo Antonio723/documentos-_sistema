@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
 import { ForbiddenError } from '../shared/errors/AppError';
+import { env } from '../config/env';
 
 export function requirePermission(resource: string, action: string) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    if (env.AUTH_DISABLED) return next();
+
     const user = req.user;
     if (!user) throw new ForbiddenError();
 

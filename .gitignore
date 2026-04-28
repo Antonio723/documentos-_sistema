@@ -16,6 +16,8 @@ build/
 # Variáveis de ambiente
 .env
 .env.*
+**.env
+**.env.*
 
 # Sistema
 .DS_Store

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router-dom';
 import { Moon, Sun, LogOut, User, Bell, BellDot, AlertTriangle, Info, AlertCircle, CheckCheck, ExternalLink } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -25,12 +26,14 @@ function NotificationPanel({
   onMarkAllRead,
   onNavigate,
   onClose,
+  navigate,
 }: {
   alerts: AlertNotification[];
   onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
   onNavigate: (alert: AlertNotification) => void;
   onClose: () => void;
+  navigate: NavigateFunction;
 }) {
   const unread = alerts.filter(a => !a.isRead);
 
@@ -93,7 +96,7 @@ function NotificationPanel({
             variant="ghost"
             size="sm"
             className="w-full text-xs"
-            onClick={onClose}
+            onClick={() => { navigate('/audit'); onClose(); }}
           >
             <ExternalLink className="h-3.5 w-3.5 mr-1" />Ver auditoria completa
           </Button>
@@ -189,6 +192,7 @@ export function Topbar({ title }: TopbarProps) {
               onMarkAllRead={() => markAllReadMutation.mutate()}
               onNavigate={handleNavigateAlert}
               onClose={() => setNotifOpen(false)}
+              navigate={navigate}
             />
           )}
         </div>

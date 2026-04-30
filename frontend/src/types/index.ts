@@ -1,6 +1,6 @@
 export type DocumentStatus = 'draft' | 'review' | 'approval' | 'published' | 'obsolete' | 'cancelled';
 export type Confidentiality = 'public_internal' | 'restricted' | 'confidential' | 'critical';
-export type ApprovalStatus = 'in_progress' | 'approved' | 'rejected' | 'cancelled';
+export type ApprovalStatus = 'pending' | 'in_progress' | 'approved' | 'rejected' | 'cancelled';
 export type ApprovalActionType = 'approve' | 'reject' | 'request_changes';
 
 export interface PaginatedResult<T> {

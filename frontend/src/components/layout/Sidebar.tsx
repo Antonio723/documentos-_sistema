@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, FolderOpen, Users, Building2, Shield, ChevronLeft, GitBranch, CheckSquare, BookOpen, ScrollText, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, FileText, FolderOpen, Users, Building2, Shield, ChevronLeft, GitBranch, CheckSquare, BookOpen, ScrollText, GraduationCap, School } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui.store';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: '/approvals', icon: CheckSquare, label: 'Aprovações' },
   { to: '/my-readings', icon: BookOpen, label: 'Minha Leitura' },
   { to: '/my-trainings', icon: GraduationCap, label: 'Meus Treinamentos' },
-  { to: '/trainings', icon: GraduationCap, label: 'Treinamentos' },
+  { to: '/trainings', icon: School, label: 'Treinamentos' },
   { to: '/workflows', icon: GitBranch, label: 'Workflows' },
   { to: '/document-types', icon: FolderOpen, label: 'Tipos de Documento' },
   { to: '/users', icon: Users, label: 'Usuários' },

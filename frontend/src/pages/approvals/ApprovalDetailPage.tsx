@@ -22,6 +22,7 @@ import type { ApprovalActionType, ApprovalStatus, ApprovalRequest } from '@/type
 import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG: Record<ApprovalStatus, { label: string; variant: 'warning' | 'success' | 'destructive' | 'muted' }> = {
+  pending:     { label: 'Pendente',     variant: 'muted' },
   in_progress: { label: 'Em Andamento', variant: 'warning' },
   approved:    { label: 'Aprovado',     variant: 'success' },
   rejected:    { label: 'Rejeitado',    variant: 'destructive' },

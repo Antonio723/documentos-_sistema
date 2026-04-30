@@ -11,10 +11,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { ApprovalRequest, ApprovalStatus } from '@/types';
 
 const STATUS_CONFIG: Record<ApprovalStatus, { label: string; variant: 'warning' | 'success' | 'destructive' | 'muted'; icon: React.ElementType }> = {
-  in_progress: { label: 'Em Andamento', variant: 'warning', icon: Clock },
-  approved:    { label: 'Aprovado',     variant: 'success', icon: CheckCircle2 },
-  rejected:    { label: 'Rejeitado',    variant: 'destructive', icon: XCircle },
-  cancelled:   { label: 'Cancelado',   variant: 'muted', icon: AlertCircle },
+  pending:     { label: 'Pendente',     variant: 'muted',        icon: Clock },
+  in_progress: { label: 'Em Andamento', variant: 'warning',      icon: Clock },
+  approved:    { label: 'Aprovado',     variant: 'success',      icon: CheckCircle2 },
+  rejected:    { label: 'Rejeitado',    variant: 'destructive',  icon: XCircle },
+  cancelled:   { label: 'Cancelado',   variant: 'muted',         icon: AlertCircle },
 };
 
 function ApprovalCard({ approval, onClick }: { approval: ApprovalRequest; onClick: () => void }) {

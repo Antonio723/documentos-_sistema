@@ -8,7 +8,9 @@
       "Bash(where docker *)",
       "Bash(xargs ls *)",
       "Bash(docker.exe compose *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\anton\\\\Desktop\\\\Projetos\\\\documntos system\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

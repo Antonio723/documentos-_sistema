@@ -7,16 +7,23 @@ import { invalidateUserPermissionsCache } from '../../middlewares/rbac.middlewar
 
 const repo = new UsersRepository();
 
+type WithUserRoles = { userRoles: { role: { id: string; name: string } }[] };
+
+function serializeUser<T extends WithUserRoles>(user: T) {
+  const { userRoles, ...rest } = user;
+  return { ...rest, roles: userRoles.map((ur) => ur.role) };
+}
+
 export class UsersService {
   async findAll(companyId: string, page: number, limit: number, search?: string) {
     const { data, total } = await repo.findAll(companyId, page, limit, search);
-    return buildPaginatedResult(data, total, page, limit);
+    return buildPaginatedResult(data.map(serializeUser), total, page, limit);
   }
 
   async findById(id: string, companyId: string) {
     const user = await repo.findById(id, companyId);
     if (!user) throw new NotFoundError('User');
-    return user;
+    return serializeUser(user);
   }
 
   async create(companyId: string, dto: CreateUserDto) {
@@ -35,7 +42,7 @@ export class UsersService {
       },
     });
 
-    return user;
+    return serializeUser(user);
   }
 
   async update(id: string, companyId: string, dto: UpdateUserDto) {
@@ -54,14 +61,13 @@ export class UsersService {
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
     if (dto.password) updateData.password = await bcrypt.hash(dto.password, 12);
 
-    const user = await repo.update(id, updateData);
-
     if (dto.roleIds) {
       await repo.syncRoles(id, dto.roleIds);
       await invalidateUserPermissionsCache(id);
     }
 
-    return user;
+    const user = await repo.update(id, updateData);
+    return serializeUser(user);
   }
 
   async delete(id: string, companyId: string) {

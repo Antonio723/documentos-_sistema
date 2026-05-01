@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, Users, Shield, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Users, Shield, CheckCircle2, XCircle, Check } from 'lucide-react';
 import { usersService, rolesService } from '@/services/users.service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,23 +16,56 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import type { User } from '@/types';
 
+const SPECIAL_CHARS = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/;
+
+const passwordRules = [
+  { label: 'Mínimo 8 caracteres',        test: (v: string) => v.length >= 8 },
+  { label: 'Letra maiúscula (A-Z)',       test: (v: string) => /[A-Z]/.test(v) },
+  { label: 'Letra minúscula (a-z)',       test: (v: string) => /[a-z]/.test(v) },
+  { label: 'Número (0-9)',               test: (v: string) => /\d/.test(v) },
+  { label: 'Símbolo (!@#$%...)',          test: (v: string) => SPECIAL_CHARS.test(v) },
+];
+
+const passwordSchema = z
+  .string()
+  .min(8, 'Mínimo 8 caracteres')
+  .max(128, 'Máximo 128 caracteres')
+  .regex(/[A-Z]/, 'Precisa de letra maiúscula')
+  .regex(/[a-z]/, 'Precisa de letra minúscula')
+  .regex(/\d/, 'Precisa de número')
+  .regex(SPECIAL_CHARS, 'Precisa de símbolo (!@#$%...)');
+
 const createSchema = z.object({
   name:     z.string().min(2, 'Nome obrigatório'),
   email:    z.string().email('E-mail inválido'),
-  password: z.string().min(8, 'Mínimo 8 caracteres')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Precisa de maiúscula, minúscula, número e símbolo'),
+  password: passwordSchema,
   roleIds:  z.array(z.string()).min(1, 'Selecione ao menos um papel'),
 });
 
 const editSchema = z.object({
   name:     z.string().min(2).optional(),
   email:    z.string().email().optional(),
-  password: z.string().min(8)
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .optional().or(z.literal('')),
+  password: passwordSchema.optional().or(z.literal('')),
   roleIds:  z.array(z.string()).min(1, 'Selecione ao menos um papel'),
   isActive: z.boolean().optional(),
 });
+
+function PasswordRulesHint({ value }: { value: string }) {
+  if (!value) return null;
+  return (
+    <ul className="mt-1.5 space-y-0.5">
+      {passwordRules.map(rule => {
+        const ok = rule.test(value);
+        return (
+          <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600' : 'text-muted-foreground'}`}>
+            <Check className={`h-3 w-3 shrink-0 ${ok ? 'opacity-100' : 'opacity-30'}`} />
+            {rule.label}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 type CreateForm = z.infer<typeof createSchema>;
 type EditForm   = z.infer<typeof editSchema>;
@@ -74,7 +107,8 @@ function UserFormDialog({ open, onOpenChange, editing, onSaved }: UserFormDialog
     onError: () => toast.error('Erro ao salvar usuário'),
   });
 
-  const selectedRoles = form.watch('roleIds') as string[];
+  const selectedRoles  = form.watch('roleIds') as string[];
+  const passwordValue  = form.watch('password') as string;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,6 +130,7 @@ function UserFormDialog({ open, onOpenChange, editing, onSaved }: UserFormDialog
           <div className="space-y-1.5">
             <Label>{editing ? 'Nova senha (deixe vazio para manter)' : 'Senha *'}</Label>
             <Input type="password" {...form.register('password')} placeholder="••••••••" />
+            <PasswordRulesHint value={passwordValue ?? ''} />
             {form.formState.errors.password && <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>}
           </div>
           <div className="space-y-1.5">
